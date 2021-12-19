@@ -1,0 +1,40 @@
+
+
+
+What data are we interested in?
+
+# A simplistic way 
+data[user] = {
+    channel1: timeInChannel
+    channel2: timeInChannel
+}
+
+# More insights if we just log every voiceState
+data[user] = {
+    date1: {
+        channel1: timeInChannel1
+        channel2: timeInChannel2
+    }
+}
+
+# In the more extreme case we could just log every voiceState change
+# Say we had a user for 2 years moving 40 channels a day => 28,000 
+data[user] = [all voiceState events ever]
+
+
+# Approach 2 seems closest to the level of detail we are interested in.
+
+How can we realize this approach?
+
+# Getting the data
+We are interested in if a user leaves the server of changes to a different channel => time in that channel needs to be updated
+Compute time with t = newstate.time - oldstate.time
+
+Unfortunately we are not provided with the time of the voiceState update so we will have to maintain it ourselves
+Maintain dict[user_id] = old_time
+    user moves to new channel => compute time, set dict[user_id] = cur_time
+    user leaves server => compute time, del dict[user_id]
+
+
+# Storing the data
+For every voiceState update => contact DB and update channel time for that user
