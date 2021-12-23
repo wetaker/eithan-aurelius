@@ -38,3 +38,13 @@ Maintain dict[user_id] = old_time
 
 # Storing the data
 For every voiceState update => contact DB and update channel time for that user
+
+
+
+schema
+
+channel_sessions
+{user_id, duration, date, channel_id}
+
+user_channel_connection
+{user_id, channel_id, duration}
