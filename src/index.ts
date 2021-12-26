@@ -1,34 +1,38 @@
 import { Client, Intents } from 'discord.js'
-import { MongoClient } from 'mongodb'
-import { config } from 'dotenv'
-import {logChannelTimes, records} from './channel_logger'
-import {addData} from './mongo_data'
-config()
+import { MongoConnection } from './Mongo'
+import { SubscriberCollection } from './SubscriberCollection';
+import { ChannelTimeLogger } from './ChannelLogger'
 
 // Connect to discord
-const discord_client = new Client({ intents: [
-        Intents.FLAGS.GUILDS,
-        Intents.FLAGS.GUILD_VOICE_STATES] 
-    });
 
-discord_client.on('ready', () => console.log('Connected'))
-discord_client.login(process.env.TOKEN)
+async function main() {
+    const discord_client = new Client({ intents: [
+            Intents.FLAGS.GUILDS,
+            Intents.FLAGS.GUILD_VOICE_STATES] 
+        });
 
-// Connect to DB
-const mongo_client = new MongoClient(process.env.DB_URI)
-mongo_client.connect()
+    discord_client.on('ready', () => console.log('Connected'))
+    discord_client.login(process.env.TOKEN)
 
-
-// Log channel changes
-discord_client.on('voiceStateUpdate', logChannelTimes);
-
-// Update database
-const UPDATE_INTERVAL = 0.2 // Update interval in minutes
-setInterval(
-    async () => {
-        await addData(mongo_client, records)
-        records.length = 0
-    }, 
-    60*1000*UPDATE_INTERVAL)
+    // Connect to DB and fetch subscribers
+    await MongoConnection.connect()
+    let subscribers = new SubscriberCollection(JSON.parse(JSON.stringify(
+        await MongoConnection.getSubscribers())))
 
 
+    // Log channel changes
+    const logger = new ChannelTimeLogger(subscribers)
+    discord_client.on('voiceStateUpdate', logger.logChannelTimes);
+
+    // // Update database
+    // const UPDATE_INTERVAL = 0.2 // Update interval in minutes
+    // setInterval(
+    //     async () => {
+    //         await addData(mongo_client, records)
+    //         records.length = 0
+    //     }, 
+    //     60*1000*UPDATE_INTERVAL)
+
+}
+
+main()
