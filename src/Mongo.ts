@@ -1,5 +1,6 @@
 import { MongoClient } from "mongodb";
 import { config } from 'dotenv'
+import { Subscriber, SubscriberCollection } from './SubscriberCollection'
 config()
 
 const MongoConnection = (() => {
@@ -10,29 +11,39 @@ const MongoConnection = (() => {
         await client.connect()
     }
 
-    async function syncWithDB(data: any) {
+    async function syncWithDB(records: SubscriberCollection) {
         let client = getClient()
         
-        let bulkUpdates = data.map(x => {
+        console.log('Syncing with database')
+        let subs = Array.from(records.subscribers.values())
+        console.log(subs)
+
+        let bulkUpdates = subs
+        .map((x : Subscriber) => {
             return {updateOne: {
-                filter: {'user_id': x.user_id},
+                filter: {'tag': x.tag},
                 update: {$set: {
-                    'user_id': x.tag,
-                    'channels': x.channels,
-                    'work_per_day': x.work_per_day
+                    'tag': x.tag,
+                    'data': {
+                        'channels': Object.fromEntries(x.data.channels),
+                        'work_per_day': Object.fromEntries(x.data.work_by_day),
+                        'total_duration' : x.data.total_duration
+                    }
                 }},
                 upsert: true
             }}
         })
+        if (bulkUpdates.length > 0) client.db('Discord-bot').collection('subscribers').bulkWrite(bulkUpdates)
     }
 
     async function getSubscribers() { 
-            console.log('Getting Subscribers from DB')
+            console.log('Getting Subscribers from DB:')
             const cursor = getClient().db('Discord-bot').collection('subscribers').find()
             let data = await cursor.toArray()
+            console.log(data)
             return data
     }
-    return {connect, getSubscribers}
+    return {connect, getSubscribers, syncWithDB}
 
 })()
 

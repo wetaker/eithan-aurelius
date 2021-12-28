@@ -3,7 +3,7 @@ import {SubscriberCollection} from './SubscriberCollection'
 
 
 class ChannelTimeLogger {
-    activeData = new Map<String, Date>();
+    activeData = new Map<string, Date>();
     records : SubscriberCollection
 
     constructor(data : SubscriberCollection) {
@@ -17,26 +17,24 @@ class ChannelTimeLogger {
 
     enteredChannel = (id) => {
         console.log("entered channel")
-        this.activeData[id] = new Date()
+        this.activeData.set(id, new Date())
     }
 
-
-    leftChannel = (user_tag, {vs_id, channel}) => {
-        console.log("left channel")
-        if (!(vs_id in this.records)) {
-            console.log('Initializing user')
-            this.records.update(user_tag, channel.name, Date.now() - this.activeData.get(vs_id).getTime())
-        }
+    leftChannel = (user_tag, {id : vs_id, channel}: VoiceState) => {
+        if (!this.activeData.has(vs_id)) return
+        this.records.update(user_tag, channel.name, Date.now() - this.activeData.get(vs_id).getTime())
+        
         if (this.activeData.has(vs_id)) 
             delete this.activeData[vs_id]
     }
 
     logChannelTimes = (oldState : VoiceState, newState : VoiceState) => {
         const user_tag = oldState.member.user.tag
+        if (!this.records.subscribed(user_tag)) return
         const {channelId: old_id} = oldState
         const {channelId: new_id} = newState
         if (new_id === null) { // Disconnected from server
-            this.leftChannel(user_tag, oldState.id)
+            this.leftChannel(user_tag, oldState)
         }
         else if (old_id === null) { // Connected to server
             this.enteredChannel(newState.id)
@@ -45,8 +43,8 @@ class ChannelTimeLogger {
             this.leftChannel(user_tag, oldState)
             this.enteredChannel(newState.id)
         }
-        console.log(this.activeData)
-        console.log(this.records)
+        console.log(`Displaying active data: `, this.activeData)
+        console.log(`Displaying records:`, this.records, '\n--------------')
     }
 }
 

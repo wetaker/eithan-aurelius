@@ -2,8 +2,9 @@ import { Client, Intents } from 'discord.js'
 import { MongoConnection } from './Mongo'
 import { SubscriberCollection } from './SubscriberCollection';
 import { ChannelTimeLogger } from './ChannelLogger'
+import { handleCommands } from './interact-commands'
 
-// Connect to discord
+const UPDATE_INTERVAL = 0.2 // Update interval in minutes
 
 async function main() {
     const discord_client = new Client({ intents: [
@@ -19,19 +20,20 @@ async function main() {
     let subscribers = new SubscriberCollection(JSON.parse(JSON.stringify(
         await MongoConnection.getSubscribers())))
 
-
     // Log channel changes
     const logger = new ChannelTimeLogger(subscribers)
     discord_client.on('voiceStateUpdate', logger.logChannelTimes);
 
-    // // Update database
-    // const UPDATE_INTERVAL = 0.2 // Update interval in minutes
-    // setInterval(
-    //     async () => {
-    //         await addData(mongo_client, records)
-    //         records.length = 0
-    //     }, 
-    //     60*1000*UPDATE_INTERVAL)
+
+    // Listen for commands
+    discord_client.on('interactionCreate', (interaction) => handleCommands(interaction, subscribers))
+
+    // Update database
+    setInterval(
+        async () => {
+            await MongoConnection.syncWithDB(logger.records)
+        }, 
+        60*1000*UPDATE_INTERVAL)
 
 }
 

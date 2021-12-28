@@ -15,7 +15,7 @@
   ],
   "include":[
     "src/**/*.ts"
-  ],
+, "src/deploy-commands.js"  ],
   "ts-node": {
     "compilerOptions": {
       "module": "commonjs" // WAs commonjs
